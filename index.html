@@ -264,6 +264,26 @@
     font-style: italic;
   }
 
+  .t2hdr-prompt {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: #b0b8c4;
+    font-style: italic;
+    max-height: 100px;
+    overflow-y: auto;
+  }
+  .t2hdr-prompt .prompt-label {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--accent);
+    margin-right: 6px;
+  }
+
   /* ==========================================
      Before/After Curtain
      ========================================== */
@@ -424,20 +444,21 @@
 <header class="hero">
   <h1>LumiVid: HDR Video Generation via Latent Alignment with Logarithmic Encoding</h1>
   <div class="authors">
-    Naomi Ken Korem<sup>1</sup> &nbsp; Mohamed Oumoumad<sup>2</sup> &nbsp; Harel Cain<sup>1</sup> &nbsp; Matan Ben Yosef<sup>1</sup><br>
+    Naomi Ken Korem<sup>1</sup> &nbsp; Mohamed Oumoumad<sup>2</sup> &nbsp; Matan Ben Yosef<sup>1</sup> &nbsp; Amir Gam<sup>1</sup> &nbsp; Harel Cain<sup>1</sup><br>
     Urska Jelercic<sup>1</sup> &nbsp; Ofir Bibi<sup>1</sup> &nbsp; Yaron Inger<sup>1</sup> &nbsp; Or Patashnik<sup>3</sup> &nbsp; Daniel Cohen-Or<sup>3</sup>
   </div>
   <div class="affiliations">
     <sup>1</sup>Lightricks &nbsp;&nbsp; <sup>2</sup>Gear Productions &nbsp;&nbsp; <sup>3</sup>Tel Aviv University
   </div>
-  <div class="links">
-    <a href="https://arxiv.org/abs/2604.11788">
-      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/></svg>
-      Paper
-    </a>
-
-  </div>
 </header>
+
+<!-- ===== EXPLAINER VIDEO ===== -->
+<section>
+  <div class="container">
+    <h2>Explainer Video</h2>
+    <video src="hdr_explainer_v15_narrated.mp4" controls playsinline style="width: 100%; display: block; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.3);"></video>
+  </div>
+</section>
 
 <!-- ===== INTERACTIVE EV DEMO ===== -->
 <section>
@@ -448,9 +469,23 @@
     </p>
 
     <div class="ev-demo">
-      <div class="scene-tabs">
+      <div class="scene-tabs" id="sdr2hdr-scene-tabs">
         <button class="scene-tab active" data-scene="dolly_orb">Astronaut &mdash; Spaceship Corridor</button>
         <button class="scene-tab" data-scene="sunset_PF0045">Car &mdash; Garage Daylight</button>
+        <button class="scene-tab" data-scene="window_interior">Interior &mdash; Window Light</button>
+        <button class="scene-tab" data-scene="train_window">Train &mdash; Window View</button>
+        <button class="scene-tab" data-scene="desert_tree">Desert &mdash; Tree Shade</button>
+
+
+        <button class="scene-tab" data-scene="dark_forest">Forest &mdash; Dark Canopy</button>
+
+        <button class="scene-tab" data-scene="stylized-walk-sunset">Stylized Walk &mdash; Sunset</button>
+        <button class="scene-tab" data-scene="candle-attic-night">Candle &mdash; Attic Night</button>
+        <button class="scene-tab" data-scene="cathedral-window-interior">Cathedral &mdash; Window Interior</button>
+
+        <button class="scene-tab" data-scene="welder-sparks-darkshop">Welder &mdash; Sparks</button>
+        <button class="scene-tab" data-scene="inkwash-mountain-mist">Ink-Wash &mdash; Mountain</button>
+        <button class="scene-tab" data-scene="fireworks-lake-finale">Fireworks &mdash; Lake Finale</button>
       </div>
 
       <div class="ev-video-area">
@@ -465,18 +500,66 @@
       <div class="ev-slider-area">
         <div class="ev-current"><span class="ev-label">Exposure </span><span id="ev-display">EV 0</span></div>
         <div class="ev-slider-row">
-          <span class="ev-endpoint">EV &minus;4</span>
-          <input type="range" class="ev-slider" id="ev-slider" min="0" max="6" value="3" step="1">
-          <span class="ev-endpoint">EV +4</span>
+          <span class="ev-endpoint">EV &minus;3</span>
+          <input type="range" class="ev-slider" id="ev-slider" min="0" max="4" value="2" step="1">
+          <span class="ev-endpoint">EV +3</span>
         </div>
         <div class="ev-ticks" id="ev-ticks">
-          <span data-idx="0">&minus;4</span>
-          <span data-idx="1">&minus;3</span>
-          <span data-idx="2">&minus;1.5</span>
-          <span data-idx="3" class="active-tick">0</span>
-          <span data-idx="4">+1.5</span>
-          <span data-idx="5">+3</span>
-          <span data-idx="6">+4</span>
+          <span data-idx="0">&minus;3</span>
+          <span data-idx="1">&minus;1.5</span>
+          <span data-idx="2" class="active-tick">0</span>
+          <span data-idx="3">+1.5</span>
+          <span data-idx="4">+3</span>
+        </div>
+        <div class="ev-hint">Negative EV reveals highlight detail &middot; Positive EV reveals shadow detail</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TEXT-TO-HDR ===== -->
+<section>
+  <div class="container">
+    <h2>Text-to-HDR Generation</h2>
+    <p>
+      LumiVid can also generate HDR video directly from text prompts. The output is a full scene-linear EXR with real dynamic range &mdash; drag the exposure slider to explore highlights and shadows that a standard video cannot capture.
+    </p>
+
+    <div class="ev-demo">
+      <div class="scene-tabs" id="t2hdr-scene-tabs">
+        <button class="scene-tab active" data-scene="neon_noir">Neon Noir &mdash; Rain Street</button>
+        <button class="scene-tab" data-scene="scifi_bridge">Sci-Fi &mdash; Starship Bridge</button>
+        <button class="scene-tab" data-scene="savanna_sunset">Savanna &mdash; Elephant Sunset</button>
+        <button class="scene-tab" data-scene="horror_basement">Horror &mdash; Basement</button>
+        <button class="scene-tab" data-scene="war_trench">War &mdash; Dawn Trench</button>
+        <button class="scene-tab" data-scene="period_drama">Period &mdash; Candlelight Scholar</button>
+        <button class="scene-tab" data-scene="dramatic_interior">Drama &mdash; Home Office</button>
+
+        <button class="scene-tab" data-scene="aerial_drone">Aerial &mdash; City Sunset</button>
+        <button class="scene-tab" data-scene="underwater">Underwater &mdash; Shipwreck</button>
+      </div>
+
+      <div class="t2hdr-prompt" id="t2hdr-prompt"></div>
+
+      <div class="ev-video-area" style="grid-template-columns: 1fr; max-width: 768px; margin: 0 auto;">
+        <div class="ev-video-col" id="t2hdr-col">
+          <div class="label hdr-label">HDR Output (Text-to-HDR)</div>
+        </div>
+      </div>
+
+      <div class="ev-slider-area">
+        <div class="ev-current"><span class="ev-label">Exposure </span><span id="t2hdr-ev-display">EV 0</span></div>
+        <div class="ev-slider-row">
+          <span class="ev-endpoint">EV &minus;3</span>
+          <input type="range" class="ev-slider" id="t2hdr-ev-slider" min="0" max="4" value="2" step="1">
+          <span class="ev-endpoint">EV +3</span>
+        </div>
+        <div class="ev-ticks" id="t2hdr-ev-ticks">
+          <span data-idx="0">&minus;3</span>
+          <span data-idx="1">&minus;1.5</span>
+          <span data-idx="2" class="active-tick">0</span>
+          <span data-idx="3">+1.5</span>
+          <span data-idx="4">+3</span>
         </div>
         <div class="ev-hint">Negative EV reveals highlight detail &middot; Positive EV reveals shadow detail</div>
       </div>
@@ -496,9 +579,9 @@
       <div class="curtain-card">
         <div class="card-title">Airport &mdash; Sunrise</div>
         <div class="curtain-wrap" data-curtain>
-          <video src="videos/vid_airport_hdr_graded.mp4" muted loop playsinline autoplay></video>
+          <video src="videos/vid_airport_hdr_graded.mp4" muted loop playsinline preload="metadata"></video>
           <div class="curtain-overlay">
-            <video src="videos/vid_airport_sdr.mp4" muted loop playsinline autoplay></video>
+            <video src="videos/vid_airport_sdr.mp4" muted loop playsinline preload="metadata"></video>
           </div>
           <div class="curtain-divider"></div>
           <div class="curtain-label left-label">SDR</div>
@@ -509,9 +592,9 @@
       <div class="curtain-card">
         <div class="card-title">Sunset &mdash; Golden Hour</div>
         <div class="curtain-wrap" data-curtain>
-          <video src="videos/vid_sunset_hdr_graded.mp4" muted loop playsinline autoplay></video>
+          <video src="videos/vid_sunset_hdr_graded.mp4" muted loop playsinline preload="metadata"></video>
           <div class="curtain-overlay">
-            <video src="videos/vid_sunset_sdr.mp4" muted loop playsinline autoplay></video>
+            <video src="videos/vid_sunset_sdr.mp4" muted loop playsinline preload="metadata"></video>
           </div>
           <div class="curtain-divider"></div>
           <div class="curtain-label left-label">SDR</div>
@@ -536,28 +619,28 @@
           <span class="item-title">Carousel &mdash; Night Glow</span>
           <span class="item-badge">Top: SDR &middot; Bottom: HDR</span>
         </div>
-        <video src="videos/carousel_night_glow_sdr_vs_hdr.mp4" muted loop playsinline autoplay></video>
+        <video src="videos/carousel_night_glow_sdr_vs_hdr.mp4" muted loop playsinline preload="metadata"></video>
       </div>
       <div class="showcase-item">
         <div class="item-info">
           <span class="item-title">Airport Silhouettes &mdash; Sunset</span>
           <span class="item-badge">Top: SDR &middot; Bottom: HDR</span>
         </div>
-        <video src="videos/airport_silhouettes_sunset.mp4" muted loop playsinline autoplay></video>
+        <video src="videos/airport_silhouettes_sunset.mp4" muted loop playsinline preload="metadata"></video>
       </div>
       <div class="showcase-item">
         <div class="item-info">
           <span class="item-title">Boy &mdash; Cozy Room</span>
           <span class="item-badge">Top: SDR &middot; Bottom: HDR</span>
         </div>
-        <video src="videos/boy_cozy_room_moody.mp4" muted loop playsinline autoplay></video>
+        <video src="videos/boy_cozy_room_moody.mp4" muted loop playsinline preload="metadata"></video>
       </div>
       <div class="showcase-item">
         <div class="item-info">
           <span class="item-title">Dandelion Field &mdash; Sunset</span>
           <span class="item-badge">Top: SDR &middot; Bottom: HDR</span>
         </div>
-        <video src="videos/dandelion_girl_sunset_grid_hdr_vs_sdr.mp4" muted loop playsinline autoplay></video>
+        <video src="videos/dandelion_girl_sunset_grid_hdr_vs_sdr.mp4" muted loop playsinline preload="metadata"></video>
       </div>
     </div>
   </div>
@@ -568,27 +651,27 @@
   <div class="container">
     <h2>Abstract</h2>
     <p>
-      High dynamic range (HDR) imagery offers a rich and faithful representation of scene radiance, but remains challenging for generative models due to its mismatch with the bounded, perceptually compressed data on which these models are trained. In this work, we show that HDR generation can be achieved in a much simpler way by leveraging the strong visual priors already captured by pretrained generative models. We observe that a logarithmic encoding widely used in cinematic pipelines maps HDR imagery into a distribution that is naturally aligned with the latent space of these models, enabling direct adaptation via lightweight fine-tuning without retraining an encoder. To recover details that are not directly observable in the input, we further introduce a training strategy based on <em>camera-mimicking degradations</em> that encourages the model to infer missing high dynamic range content from its learned priors. Combining these insights, we demonstrate high-quality HDR video generation using a pretrained video model with minimal adaptation, achieving strong results across diverse scenes and challenging lighting conditions.
+      High dynamic range (HDR) imagery provides a rich representation of scene radiance, but remains challenging for diffusion models trained on bounded, perceptually compressed imagery. A natural approach is to learn a mapping from HDR data into the latent space of a pretrained diffusion model. However, this requires large HDR datasets and substantial additional training. In this work, we present a framework for SDR-to-HDR video translation and text-to-HDR video generation, leveraging the visual priors of pretrained diffusion models. We observe that applying a logarithmic encoding, commonly used in cinematic pipelines, to HDR videos produces representations that are naturally aligned with the latent space of these models. This alignment enables adapting pretrained diffusion models for HDR generation through lightweight fine-tuning, without modifying the latent space in which they operate or requiring an explicit HDR-to-latent mapping. To encourage the model to infer missing HDR content from its learned priors, we augment SDR-to-HDR training with <em>camera-mimicking degradations</em> that require recovering lost details. Using only lightweight adaptation of a pretrained video diffusion model, we demonstrate high-quality HDR video generation from both text and SDR video across diverse scenes and challenging lighting conditions. Our results show that HDR can be effectively modeled when its representation is aligned with the model's learned priors.
     </p>
 
     <div class="figure wide">
-      <img src="figures/hdr_training.jpg" alt="LumiVid training pipeline">
+      <img src="figures/hdr_training.png" alt="LumiVid training pipeline">
       <div class="caption">
-        <strong>Training.</strong> Scene-linear HDR frames are compressed via LogC3 and encoded by the frozen VAE to produce target latents. The same HDR frames are tonemapped to SDR and degraded (MP4 compression, blur, contrast) to produce reference latents. Both are concatenated and fed to the DiT with LoRA adapters; only the LoRA weights are trained via flow matching loss.
+        <strong>LumiVid Training Overview.</strong> Scene-linear HDR frames are compressed via LogC3 and encoded by the frozen VAE to produce target latents z<sub>tgt</sub>. The gray optional block is utilized only for SDR-to-HDR training, where HDR frames are tone-mapped and processed through camera-mimicking degradations to produce reference latents z<sub>ref</sub>. In the SDR-to-HDR case, these reference latents are concatenated with the noisy target latents before being fed to the Video DiT. For Text-to-HDR synthesis, there are no reference tokens to concatenate, and the DiT operates directly on noisy target latents conditioned by text prompts. Throughout both processes, the VAE remains frozen, and only the lightweight LoRA adapters are trained via flow matching loss.
       </div>
     </div>
 
     <div class="figure wide">
-      <img src="figures/hdr_inference.jpg" alt="LumiVid inference pipeline">
+      <img src="figures/hdr_inference.png" alt="LumiVid inference pipeline">
       <div class="caption">
-        <strong>Inference.</strong> An SDR video is VAE-encoded, concatenated with noise, and denoised by the DiT+LoRA. The output latents are VAE-decoded and decompressed via LogC3<sup>&minus;1</sup> to produce scene-linear float16 EXR. The VAE and DiT remain frozen; only the LoRA adapters (&lt;1% parameters) are trained.
+        <strong>LumiVid Inference Overview.</strong> Our pipeline generates scene-linear HDR video from either semantic text prompts or SDR references. For SDR-to-HDR translation, an input video is processed through the gray optional path, where it is VAE-encoded to z<sub>ref</sub>, and concatenated with noise to provide spatial conditioning. In the Text-to-HDR case, this concatenation step is bypassed as there are no reference tokens; the DiT operates directly on noise and text embeddings. In both modes, the Video DiT uses trained LoRA adapters to denoise the latents, which are then VAE-decoded and decompressed via LogC3<sup>&minus;1</sup> to produce scene-linear float16 EXR files.
       </div>
     </div>
   </div>
 </section>
 
 <footer>
-  <p>LumiVid &mdash; Lightricks &amp; Tel Aviv University</p>
+  <p>LumiVid &mdash; Anonymous Submission</p>
 </footer>
 
 <script>
@@ -596,109 +679,90 @@
 // EV Exposure Slider Demo — pooled video approach
 // =============================================
 const EV_LEVELS = [
-  { dir: 'evm4_0', label: 'EV \u22124' },
   { dir: 'evm3_0', label: 'EV \u22123' },
   { dir: 'evm1_5', label: 'EV \u22121.5' },
   { dir: 'evp0_0', label: 'EV 0' },
   { dir: 'evp1_5', label: 'EV +1.5' },
   { dir: 'evp3_0', label: 'EV +3' },
-  { dir: 'evp4_0', label: 'EV +4' },
 ];
-const SCENES = ['dolly_orb', 'sunset_PF0045'];
+const SCENES = ['dolly_orb', 'sunset_PF0045', 'window_interior', 'train_window', 'desert_tree', 'dark_forest', 'stylized-walk-sunset', 'candle-attic-night', 'cathedral-window-interior', 'welder-sparks-darkshop', 'inkwash-mountain-mist', 'fireworks-lake-finale'];
 
 let currentScene = 'dolly_orb';
-let currentEvIdx = 3;
+let currentEvIdx = 2;
 
 // Pool: videoPool[scene][type][evIdx] = <video> element
+// Lazy: scene entries are created on first activation, not up front,
+// so the page doesn't fire ~120 video requests on first paint.
 const videoPool = {};
 const sdrCol = document.getElementById('sdr-col');
 const hdrCol = document.getElementById('hdr-col');
 const evSlider = document.getElementById('ev-slider');
 const evDisplay = document.getElementById('ev-display');
 const evTicks = document.getElementById('ev-ticks');
-const sceneTabs = document.querySelectorAll('.scene-tab');
+const sceneTabs = document.querySelectorAll('#sdr2hdr-scene-tabs .scene-tab');
 
 function getVideoPath(type, evDir, scene) {
   return `videos/${type}/${evDir}/${scene}.mp4`;
 }
 
-// Create all <video> elements up front, add to DOM, start playing
-function initPool() {
-  SCENES.forEach(scene => {
-    videoPool[scene] = { sdr: [], hdr: [] };
-    EV_LEVELS.forEach((ev, idx) => {
-      ['sdr', 'hdr'].forEach(type => {
-        const v = document.createElement('video');
-        v.src = getVideoPath(type, ev.dir, scene);
-        v.muted = true;
-        v.loop = true;
-        v.playsInline = true;
-        v.preload = 'auto';
-        v.className = 'ev-hidden';
-        videoPool[scene][type][idx] = v;
-        const col = type === 'sdr' ? sdrCol : hdrCol;
-        col.appendChild(v);
-      });
+function ensureScene(scene) {
+  if (videoPool[scene]) return;
+  videoPool[scene] = { sdr: [], hdr: [] };
+  EV_LEVELS.forEach((ev, idx) => {
+    ['sdr', 'hdr'].forEach(type => {
+      const v = document.createElement('video');
+      v.src = getVideoPath(type, ev.dir, scene);
+      v.muted = true;
+      v.loop = true;
+      v.playsInline = true;
+      v.preload = 'auto';
+      v.className = 'ev-hidden';
+      videoPool[scene][type][idx] = v;
+      (type === 'sdr' ? sdrCol : hdrCol).appendChild(v);
     });
   });
 }
 
-// Keep all videos in sync with the active SDR video's time
+// Keep videos in the active scene in sync with the SDR reference's time.
 let lastRefTime = 0;
 function syncAllVideos() {
-  const ref = videoPool[currentScene].sdr[currentEvIdx];
+  const ref = videoPool[currentScene]?.sdr[currentEvIdx];
   if (!ref || ref.readyState < 2) { requestAnimationFrame(syncAllVideos); return; }
   const t = ref.currentTime;
-  // Detect loop restart: time jumped backward significantly
   const looped = lastRefTime - t > 0.5;
   lastRefTime = t;
-  SCENES.forEach(scene => {
-    ['sdr', 'hdr'].forEach(type => {
-      EV_LEVELS.forEach((_, idx) => {
-        const v = videoPool[scene][type][idx];
-        if (v !== ref) {
-          if (looped) {
-            v.currentTime = t;
-          } else if (Math.abs(v.currentTime - t) > 0.15) {
-            v.currentTime = t;
-          }
+  ['sdr', 'hdr'].forEach(type => {
+    EV_LEVELS.forEach((_, idx) => {
+      const v = videoPool[currentScene][type][idx];
+      if (v !== ref) {
+        if (looped || Math.abs(v.currentTime - t) > 0.15) {
+          v.currentTime = t;
         }
-      });
+      }
     });
   });
   requestAnimationFrame(syncAllVideos);
 }
 
 function showScene(scene) {
-  // Hide all videos from other scenes
-  SCENES.forEach(s => {
+  ensureScene(scene);
+  // Pause every other scene's videos
+  Object.keys(videoPool).forEach(s => {
+    if (s === scene) return;
     ['sdr', 'hdr'].forEach(type => {
-      EV_LEVELS.forEach((_, idx) => {
-        const v = videoPool[s][type][idx];
-        if (s === scene) {
-          // Pause non-active EVs to save resources, but keep them ready
-          if (idx !== currentEvIdx) {
-            v.className = 'ev-hidden';
-          }
-        } else {
-          v.className = 'ev-hidden';
-          v.pause();
-        }
-      });
+      videoPool[s][type].forEach(v => { v.className = 'ev-hidden'; v.pause(); });
     });
   });
-  // Play all EVs for current scene so they stay in sync
+  // Play all EVs for the current scene so they stay in sync
   ['sdr', 'hdr'].forEach(type => {
-    EV_LEVELS.forEach((_, idx) => {
-      const v = videoPool[scene][type][idx];
-      v.play().catch(() => {});
-    });
+    videoPool[scene][type].forEach(v => { v.play().catch(() => {}); });
   });
 }
 
 function updateEV(idx) {
   const prevSdr = videoPool[currentScene]?.sdr[currentEvIdx];
   currentEvIdx = idx;
+  ensureScene(currentScene);
 
   // Swap visibility
   ['sdr', 'hdr'].forEach(type => {
@@ -738,13 +802,125 @@ sceneTabs.forEach(t => {
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft' && currentEvIdx > 0) updateEV(currentEvIdx - 1);
-  if (e.key === 'ArrowRight' && currentEvIdx < 6) updateEV(currentEvIdx + 1);
+  if (e.key === 'ArrowRight' && currentEvIdx < 4) updateEV(currentEvIdx + 1);
 });
 
-initPool();
 showScene('dolly_orb');
-updateEV(3);
+updateEV(2);
 syncAllVideos();
+
+// =============================================
+// Text-to-HDR EV Demo
+// =============================================
+const T2HDR_SCENES = ['neon_noir', 'scifi_bridge', 'savanna_sunset', 'horror_basement', 'war_trench', 'period_drama', 'dramatic_interior', 'aerial_drone', 'underwater'];
+const T2HDR_PROMPTS = {
+  neon_noir: "Cinematic neo-noir thriller scene on a rain-drenched Hong Kong side street at 2 AM. A tall woman in her thirties with cropped black hair, a red vinyl trench coat dripping water, and a cigarette burning between two gloved fingers stands beneath a buzzing magenta noodle-shop sign. Reflections of cyan and pink neon pool on the wet asphalt beneath her boots.",
+  scifi_bridge: "Cinematic sci-fi movie scene on the bridge of a massive starship. A wide curved viewscreen dominates the front wall, showing a field of swirling plasma streaming past at faster-than-light. The captain \u2014 a tall Nigerian woman in her early fifties, gold-trimmed navy uniform \u2014 stares forward, unblinking. She says, quiet and level, \u201Ctake us in.\u201D",
+  savanna_sunset: "Cinematic nature documentary scene over a Kenyan savanna at sunrise. The sun is a huge orange disc half above the horizon, silhouetting acacia trees against a magenta-to-cobalt sky. A lone herd of elephants walks in single file across the foreground, dust rising in soft golden clouds around their feet.",
+  horror_basement: "Cinematic horror scene inside a single-bulb basement at night. A bare incandescent bulb on a chain swings slowly in the center of a concrete basement, its circle of warm yellow light sliding back and forth across stacked cardboard boxes. The corners of the room are pitch black. A young woman stands at the base of the wooden stairs holding her phone as a flashlight.",
+  war_trench: "Cinematic war drama scene at a muddy Eastern Front trench at dawn in 1915. Freezing fog hangs over a churned no-man\u2019s-land. Soldiers in wet wool greatcoats crowd along a trench wall, bayonets fixed. The low sun struggles through the mist as a pale orange disc. A whistle blows. The sergeant roars, \u201COVER THE TOP \u2014 MOVE!\u201D",
+  period_drama: "Cinematic period drama scene in a 17th-century Dutch study at night. A single tallow candle burns on a heavy oak writing desk, its flame tall and bending slightly, throwing a trembling warm yellow light on parchment, a brass inkwell, and the lined face of an elderly scholar. He pauses, closes his eyes, and whispers, \u201CHeaven forgive me \u2014 I have seen too much.\u201D",
+  dramatic_interior: "Cinematic drama movie scene. Tight close-up on a woman in her mid-fifties, Southeast Asian, shoulder-length hair streaked with grey, wearing a cream blouse and a navy cardigan. She sits behind a desk in a small home office lit by a single green banker\u2019s lamp and the blue wash of a laptop screen on her face. Behind her, a window shows the deep indigo of a rainy evening.",
+
+  aerial_drone: "Cinematic aerial scene over Manhattan at sunrise. The drone flies slowly between skyscraper canyons as the first light of day hits the east-facing glass facades, turning them into walls of molten gold. Cool blue shadow still fills the streets below. The East River glitters orange-pink beyond.",
+  underwater: "Cinematic underwater scene of a sunken WWII battleship wreck at noon. The camera glides through gaping holes in the rusted hull. Shafts of bright white sunlight pierce from above, hitting the dust-like silt in sharp god-rays and illuminating the skeletal remains of a gun turret. Small silver fish scatter through the beams.",
+};
+let t2hdrScene = 'neon_noir';
+let t2hdrEvIdx = 2;
+const t2hdrPool = {};
+const t2hdrCol = document.getElementById('t2hdr-col');
+const t2hdrSlider = document.getElementById('t2hdr-ev-slider');
+const t2hdrDisplay = document.getElementById('t2hdr-ev-display');
+const t2hdrTicks = document.getElementById('t2hdr-ev-ticks');
+const t2hdrTabs = document.querySelectorAll('#t2hdr-scene-tabs .scene-tab');
+
+function ensureT2hdrScene(scene) {
+  if (t2hdrPool[scene]) return;
+  t2hdrPool[scene] = [];
+  EV_LEVELS.forEach((ev, idx) => {
+    const v = document.createElement('video');
+    v.src = `videos/t2hdr/${ev.dir}/${scene}.mp4`;
+    v.muted = true;
+    v.loop = true;
+    v.playsInline = true;
+    v.preload = 'auto';
+    v.className = 'ev-hidden';
+    t2hdrPool[scene][idx] = v;
+    t2hdrCol.appendChild(v);
+  });
+}
+
+let t2hdrLastRefTime = 0;
+function syncT2hdrVideos() {
+  const ref = t2hdrPool[t2hdrScene]?.[t2hdrEvIdx];
+  if (!ref || ref.readyState < 2) { requestAnimationFrame(syncT2hdrVideos); return; }
+  const t = ref.currentTime;
+  const looped = t2hdrLastRefTime - t > 0.5;
+  t2hdrLastRefTime = t;
+  EV_LEVELS.forEach((_, idx) => {
+    const v = t2hdrPool[t2hdrScene][idx];
+    if (v !== ref && (looped || Math.abs(v.currentTime - t) > 0.15)) {
+      v.currentTime = t;
+    }
+  });
+  requestAnimationFrame(syncT2hdrVideos);
+}
+
+function showT2hdrScene(scene) {
+  ensureT2hdrScene(scene);
+  Object.keys(t2hdrPool).forEach(s => {
+    if (s === scene) return;
+    t2hdrPool[s].forEach(v => { v.className = 'ev-hidden'; v.pause(); });
+  });
+  t2hdrPool[scene].forEach((v, idx) => {
+    v.play().catch(() => {});
+    v.className = (idx === t2hdrEvIdx) ? 'ev-active' : 'ev-hidden';
+  });
+}
+
+function updateT2hdrEV(idx) {
+  const prev = t2hdrPool[t2hdrScene]?.[t2hdrEvIdx];
+  t2hdrEvIdx = idx;
+  ensureT2hdrScene(t2hdrScene);
+  EV_LEVELS.forEach((_, i) => {
+    const v = t2hdrPool[t2hdrScene][i];
+    v.className = (i === idx) ? 'ev-active' : 'ev-hidden';
+  });
+  if (prev && prev.readyState >= 2) {
+    t2hdrPool[t2hdrScene][idx].currentTime = prev.currentTime;
+  }
+  t2hdrDisplay.textContent = EV_LEVELS[idx].label;
+  t2hdrSlider.value = idx;
+  t2hdrTicks.querySelectorAll('span').forEach(t => {
+    t.classList.toggle('active-tick', parseInt(t.dataset.idx) === idx);
+  });
+}
+
+const t2hdrPromptEl = document.getElementById('t2hdr-prompt');
+function updateT2hdrPrompt(scene) {
+  t2hdrPromptEl.innerHTML = '<span class="prompt-label">Prompt:</span>' + T2HDR_PROMPTS[scene];
+}
+
+function setT2hdrScene(scene) {
+  t2hdrScene = scene;
+  t2hdrTabs.forEach(t => t.classList.toggle('active', t.dataset.scene === scene));
+  updateT2hdrPrompt(scene);
+  showT2hdrScene(scene);
+  updateT2hdrEV(t2hdrEvIdx);
+}
+
+t2hdrSlider.addEventListener('input', () => updateT2hdrEV(parseInt(t2hdrSlider.value)));
+t2hdrTicks.querySelectorAll('span').forEach(t => {
+  t.addEventListener('click', () => updateT2hdrEV(parseInt(t.dataset.idx)));
+});
+t2hdrTabs.forEach(t => {
+  t.addEventListener('click', () => setT2hdrScene(t.dataset.scene));
+});
+
+showT2hdrScene('neon_noir');
+updateT2hdrPrompt('neon_noir');
+updateT2hdrEV(2);
+syncT2hdrVideos();
 
 // =============================================
 // Before/After Curtain
