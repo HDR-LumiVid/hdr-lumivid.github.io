@@ -1,997 +1,237 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LumiVid: HDR Video Generation via Latent Alignment with Logarithmic Encoding</title>
-<style>
-  :root {
-    --max-w: 960px;
-    --accent: #5b9cf0;
-    --accent-light: #1a2a3e;
-    --bg: #0a0a0a;
-    --fg: #e8e8e8;
-    --muted: #999;
-    --border: #2a2a2a;
-    --card-bg: #141414;
-  }
-  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
-    color: var(--fg);
-    background: var(--bg);
-    line-height: 1.65;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  /* Hero */
-  .hero {
-    background: linear-gradient(135deg, #0d1b2a 0%, #1b2838 50%, #2a1a0d 100%);
-    color: #fff;
-    padding: 60px 24px 50px;
-    text-align: center;
-  }
-  .hero h1 {
-    font-size: clamp(1.5rem, 3.8vw, 2.3rem);
-    font-weight: 700;
-    max-width: 820px;
-    margin: 0 auto 18px;
-    line-height: 1.25;
-  }
-  .hero .authors {
-    font-size: 1.15rem;
-    color: #c0c8d4;
-    max-width: 750px;
-    margin: 0 auto 6px;
-    line-height: 1.7;
-  }
-  .hero .affiliations {
-    font-size: 1.1rem;
-    color: #8899aa;
-    margin-bottom: 24px;
-  }
-  .links {
-    display: flex;
-    justify-content: center;
-    gap: 14px;
-    flex-wrap: wrap;
-  }
-  .links a {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(255,255,255,0.12);
-    color: #fff;
-    text-decoration: none;
-    padding: 9px 20px;
-    border-radius: 6px;
-    font-size: 0.92rem;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    border: 1px solid rgba(255,255,255,0.18);
-    transition: background 0.2s;
-  }
-  .links a:hover { background: rgba(255,255,255,0.22); }
-  .links svg { width: 18px; height: 18px; fill: currentColor; }
-
-  /* Layout */
-  .container { max-width: var(--max-w); margin: 0 auto; padding: 0 24px; }
-  section { padding: 48px 0; }
-  section + section { border-top: 1px solid var(--border); }
-  h2 { font-size: 1.5rem; margin-bottom: 18px; color: #fff; }
-  h3 { font-size: 1.15rem; margin-top: 28px; margin-bottom: 10px; }
-  p { margin-bottom: 14px; }
-  p:last-child { margin-bottom: 0; }
-
-  /* Figures */
-  .figure { margin: 28px 0; }
-  .figure.wide { max-width: var(--max-w); margin-left: auto; margin-right: auto; }
-  .figure img {
-    width: 100%;
-    border-radius: 6px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-    background: #fff;
-  }
-  .figure .caption {
-    text-align: center;
-    font-size: 0.88rem;
-    color: var(--muted);
-    margin-top: 10px;
-    line-height: 1.5;
-  }
-
-  /* ==========================================
-     EV Exposure Slider Demo
-     ========================================== */
-  .ev-demo {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
-  }
-
-  .scene-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-  }
-  .scene-tab {
-    padding: 8px 18px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  .scene-tab:hover { border-color: #555; color: #ccc; }
-  .scene-tab.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-
-  .ev-video-area {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #000;
-  }
-  .ev-video-col { position: relative; }
-  .ev-video-col .label {
-    position: absolute;
-    top: 10px;
-    left: 12px;
-    z-index: 2;
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 4px 10px;
-    border-radius: 4px;
-    backdrop-filter: blur(8px);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  .ev-video-col .label.sdr-label {
-    background: rgba(180, 80, 40, 0.75);
-    color: #ffd4b8;
-  }
-  .ev-video-col .label.hdr-label {
-    background: rgba(26, 95, 180, 0.75);
-    color: #b8d4ff;
-  }
-  .ev-video-col { position: relative; }
-  .ev-video-col video {
-    width: 100%;
-    display: block;
-  }
-  .ev-video-col video.ev-hidden {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    opacity: 0;
-    pointer-events: none;
-  }
-  .ev-video-col video.ev-active {
-    position: relative;
-    opacity: 1;
-  }
-
-  .ev-slider-area {
-    margin-top: 20px;
-    text-align: center;
-  }
-  .ev-current {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--fg);
-    margin-bottom: 8px;
-    font-variant-numeric: tabular-nums;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  .ev-current span.ev-label { color: var(--muted); font-size: 0.85rem; font-weight: 400; }
-  .ev-current { color: #fff; }
-
-  .ev-slider-row {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-  .ev-slider-row .ev-endpoint {
-    font-size: 0.8rem;
-    color: var(--muted);
-    white-space: nowrap;
-    min-width: 40px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-
-  input[type="range"].ev-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    flex: 1;
-    height: 6px;
-    border-radius: 3px;
-    background: #333;
-    outline: none;
-    cursor: pointer;
-  }
-  input[type="range"].ev-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    cursor: pointer;
-  }
-  input[type="range"].ev-slider::-moz-range-thumb {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    cursor: pointer;
-    border: none;
-  }
-
-  .ev-ticks {
-    display: flex;
-    justify-content: space-between;
-    max-width: 600px;
-    margin: 6px auto 0;
-    padding: 0 56px;
-  }
-  .ev-ticks span {
-    font-size: 0.7rem;
-    color: #999;
-    cursor: pointer;
-    transition: color 0.15s;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  .ev-ticks span:hover { color: #ccc; }
-  .ev-ticks span.active-tick { color: var(--accent); font-weight: 600; }
-
-  .ev-hint {
-    font-size: 0.8rem;
-    color: #999;
-    margin-top: 12px;
-    font-style: italic;
-  }
-
-  .t2hdr-prompt {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 18px;
-    margin-bottom: 16px;
-    font-size: 0.85rem;
-    line-height: 1.55;
-    color: #b0b8c4;
-    font-style: italic;
-    max-height: 100px;
-    overflow-y: auto;
-  }
-  .t2hdr-prompt .prompt-label {
-    font-style: normal;
-    font-weight: 600;
-    color: var(--accent);
-    margin-right: 6px;
-  }
-
-  /* ==========================================
-     Before/After Curtain
-     ========================================== */
-  .curtain-demos {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-  }
-  @media (max-width: 800px) {
-    .curtain-demos { grid-template-columns: 1fr; }
-  }
-  .curtain-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .curtain-card .card-title {
-    padding: 16px 20px 12px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #ccc;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  .curtain-wrap {
-    position: relative;
-    overflow: hidden;
-    cursor: ew-resize;
-    user-select: none;
-    -webkit-user-select: none;
-  }
-  .curtain-wrap video {
-    width: 100%;
-    display: block;
-  }
-  .curtain-wrap .curtain-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    overflow: hidden;
-  }
-  .curtain-wrap .curtain-overlay video {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: auto;
-    display: block;
-  }
-  .curtain-divider {
-    position: absolute;
-    top: 0;
-    width: 3px;
-    height: 100%;
-    background: #fff;
-    z-index: 5;
-    pointer-events: none;
-  }
-  .curtain-divider::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.95);
-    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
-  }
-  .curtain-divider::before {
-    content: '\2194';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 6;
-    font-size: 18px;
-    color: #333;
-    pointer-events: none;
-  }
-  .curtain-wrap .curtain-label {
-    position: absolute;
-    top: 10px;
-    z-index: 3;
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding: 3px 8px;
-    border-radius: 3px;
-    backdrop-filter: blur(8px);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  .curtain-label.left-label { left: 10px; background: rgba(180,80,40,0.75); color: #ffd4b8; }
-  .curtain-label.right-label { right: 10px; background: rgba(26,95,180,0.75); color: #b8d4ff; }
-
-  /* ==========================================
-     Showcase Grid
-     ========================================== */
-  .showcase-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-  .showcase-item {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-  }
-  .showcase-item .item-info {
-    padding: 16px 20px 12px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .showcase-item .item-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #ccc;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  .showcase-item .item-badge {
-    font-size: 0.72rem;
-    padding: 3px 10px;
-    border-radius: 20px;
-    background: rgba(91,156,240,0.15);
-    color: #7db8f0;
-    border: 1px solid rgba(91,156,240,0.25);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-  .showcase-item video {
-    width: 100%;
-    display: block;
-  }
-
-  footer {
-    text-align: center;
-    padding: 36px 24px;
-    color: #555;
-    font-size: 0.82rem;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    border-top: 1px solid var(--border);
-  }
-
-  @media (max-width: 700px) {
-    .hero { padding: 40px 16px 36px; }
-    section { padding: 32px 0; }
-    .ev-video-area { grid-template-columns: 1fr; }
-    .curtain-demos { grid-template-columns: 1fr; }
-  }
-</style>
+<meta name="description" content="LumiVid SDR-to-HDR video translation via ACEScct logarithmic alignment and dual-canvas LoRA on a frozen video VAE — no masks, prompts, or refs.">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<!-- ===== HERO ===== -->
-<header class="hero">
-  <h1>LumiVid: HDR Video Generation via Latent Alignment with Logarithmic Encoding</h1>
-  <div class="authors">
-    Naomi Ken Korem<sup>1</sup> &nbsp; Mohamed Oumoumad<sup>2</sup> &nbsp; Matan Ben Yosef<sup>1</sup> &nbsp; Amir Gam<sup>1</sup> &nbsp; Harel Cain<sup>1</sup><br>
-    Urska Jelercic<sup>1</sup> &nbsp; Ofir Bibi<sup>1</sup> &nbsp; Yaron Inger<sup>1</sup> &nbsp; Or Patashnik<sup>3</sup> &nbsp; Daniel Cohen-Or<sup>3</sup>
-  </div>
-  <div class="affiliations">
-    <sup>1</sup>Lightricks &nbsp;&nbsp; <sup>2</sup>Gear Productions &nbsp;&nbsp; <sup>3</sup>Tel Aviv University
-  </div>
-</header>
-
-<!-- ===== INTERACTIVE EV DEMO ===== -->
-<section>
-  <div class="container">
-    <h2>Interactive Exposure Comparison</h2>
-    <p>
-      Drag the exposure slider to reveal how our HDR output preserves detail across the full dynamic range, while the SDR input clips to white or black. Use the arrow keys or click on EV ticks for fine control.
-    </p>
-
-    <div class="ev-demo">
-      <div class="scene-tabs" id="sdr2hdr-scene-tabs">
-        <button class="scene-tab active" data-scene="dolly_orb">Astronaut &mdash; Spaceship Corridor</button>
-        <button class="scene-tab" data-scene="sunset_PF0045">Car &mdash; Garage Daylight</button>
-        <button class="scene-tab" data-scene="window_interior">Interior &mdash; Window Light</button>
-        <button class="scene-tab" data-scene="train_window">Train &mdash; Window View</button>
-        <button class="scene-tab" data-scene="desert_tree">Desert &mdash; Tree Shade</button>
-
-
-        <button class="scene-tab" data-scene="dark_forest">Forest &mdash; Dark Canopy</button>
-
-        <button class="scene-tab" data-scene="stylized-walk-sunset">Stylized Walk &mdash; Sunset</button>
-        <button class="scene-tab" data-scene="candle-attic-night">Candle &mdash; Attic Night</button>
-        <button class="scene-tab" data-scene="cathedral-window-interior">Cathedral &mdash; Window Interior</button>
-
-        <button class="scene-tab" data-scene="welder-sparks-darkshop">Welder &mdash; Sparks</button>
-        <button class="scene-tab" data-scene="inkwash-mountain-mist">Ink-Wash &mdash; Mountain</button>
-        <button class="scene-tab" data-scene="fireworks-lake-finale">Fireworks &mdash; Lake Finale</button>
-      </div>
-
-      <div class="ev-video-area">
-        <div class="ev-video-col" id="sdr-col">
-          <div class="label sdr-label">SDR Input</div>
-        </div>
-        <div class="ev-video-col" id="hdr-col">
-          <div class="label hdr-label">HDR Output (Ours)</div>
-        </div>
-      </div>
-
-      <div class="ev-slider-area">
-        <div class="ev-current"><span class="ev-label">Exposure </span><span id="ev-display">EV 0</span></div>
-        <div class="ev-slider-row">
-          <span class="ev-endpoint">EV &minus;3</span>
-          <input type="range" class="ev-slider" id="ev-slider" min="0" max="4" value="2" step="1">
-          <span class="ev-endpoint">EV +3</span>
-        </div>
-        <div class="ev-ticks" id="ev-ticks">
-          <span data-idx="0">&minus;3</span>
-          <span data-idx="1">&minus;1.5</span>
-          <span data-idx="2" class="active-tick">0</span>
-          <span data-idx="3">+1.5</span>
-          <span data-idx="4">+3</span>
-        </div>
-        <div class="ev-hint">Negative EV reveals highlight detail &middot; Positive EV reveals shadow detail</div>
-      </div>
+<nav class="nav" aria-label="Page sections">
+  <div class="nav-inner">
+    <a class="brand" href="#top">LumiVid <span>· N. Ken Korem et al.</span></a>
+    <div class="nav-links">
+      <a href="#results">Results</a>
+      <a href="#compare">Compare</a>
+      <a href="#ablations">Ablations</a>
+      <a href="#abstract">Abstract</a>
+      <a href="#method">Method</a>
+      <a href="#video">Video</a>
     </div>
   </div>
-</section>
+</nav>
 
-<!-- ===== TEXT-TO-HDR ===== -->
-<section>
-  <div class="container">
-    <h2>Text-to-HDR Generation</h2>
-    <p>
-      LumiVid can also generate HDR video directly from text prompts. The output is a full scene-linear EXR with real dynamic range &mdash; drag the exposure slider to explore highlights and shadows that a standard video cannot capture.
+<div class="wrap" id="top">
+
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <p class="eyebrow">SDR to HDR · BT.2020 HLG</p>
+    <h1>LumiVid: HDR Video Generation via Latent Alignment with Logarithmic Encoding</h1>
+    <p class="authors">
+      Naomi Ken Korem<sup>1</sup> &ensp; Mohamed Oumoumad<sup>1,2</sup> &ensp; Omer Hagage<sup>1</sup> &ensp; Amir Gam<sup>1</sup><br>
+      Matan Ben Yosef<sup>1</sup> &ensp; Harel Cain<sup>1</sup> &ensp; Urska Jelercic<sup>1</sup> &ensp; Ofir Bibi<sup>1</sup> &ensp; Yaron Inger<sup>1</sup><br>
+      Or Patashnik<sup>3</sup> &ensp; Daniel Cohen-Or<sup>3</sup>
     </p>
-
-    <div class="ev-demo">
-      <div class="scene-tabs" id="t2hdr-scene-tabs">
-        <button class="scene-tab active" data-scene="neon_noir">Neon Noir &mdash; Rain Street</button>
-        <button class="scene-tab" data-scene="scifi_bridge">Sci-Fi &mdash; Starship Bridge</button>
-        <button class="scene-tab" data-scene="savanna_sunset">Savanna &mdash; Elephant Sunset</button>
-        <button class="scene-tab" data-scene="horror_basement">Horror &mdash; Basement</button>
-        <button class="scene-tab" data-scene="war_trench">War &mdash; Dawn Trench</button>
-        <button class="scene-tab" data-scene="period_drama">Period &mdash; Candlelight Scholar</button>
-        <button class="scene-tab" data-scene="dramatic_interior">Drama &mdash; Home Office</button>
-
-        <button class="scene-tab" data-scene="aerial_drone">Aerial &mdash; City Sunset</button>
-        <button class="scene-tab" data-scene="underwater">Underwater &mdash; Shipwreck</button>
-      </div>
-
-      <div class="t2hdr-prompt" id="t2hdr-prompt"></div>
-
-      <div class="ev-video-area" style="grid-template-columns: 1fr; max-width: 768px; margin: 0 auto;">
-        <div class="ev-video-col" id="t2hdr-col">
-          <div class="label hdr-label">HDR Output (Text-to-HDR)</div>
-        </div>
-      </div>
-
-      <div class="ev-slider-area">
-        <div class="ev-current"><span class="ev-label">Exposure </span><span id="t2hdr-ev-display">EV 0</span></div>
-        <div class="ev-slider-row">
-          <span class="ev-endpoint">EV &minus;3</span>
-          <input type="range" class="ev-slider" id="t2hdr-ev-slider" min="0" max="4" value="2" step="1">
-          <span class="ev-endpoint">EV +3</span>
-        </div>
-        <div class="ev-ticks" id="t2hdr-ev-ticks">
-          <span data-idx="0">&minus;3</span>
-          <span data-idx="1">&minus;1.5</span>
-          <span data-idx="2" class="active-tick">0</span>
-          <span data-idx="3">+1.5</span>
-          <span data-idx="4">+3</span>
-        </div>
-        <div class="ev-hint">Negative EV reveals highlight detail &middot; Positive EV reveals shadow detail</div>
-      </div>
+    <p class="affiliations"><sup>1</sup>Lightricks &emsp; <sup>2</sup>Gear Productions &emsp; <sup>3</sup>Tel Aviv University</p>
+    <div class="btn-row">
+      <a class="btn primary" href="#results">Results</a>
+      <a class="btn ghost" href="#compare">Compare</a>
+      <a class="btn ghost" href="#ablations">Ablations</a>
+      <a class="btn ghost" href="#video">Video</a>
     </div>
-  </div>
-</section>
+    <p class="hdr-quiet">Best on HDR display.</p>
 
-<!-- ===== BEFORE/AFTER CURTAIN ===== -->
-<section>
-  <div class="container">
-    <h2>Before / After</h2>
-    <p>
-      Drag the divider to compare SDR input with our HDR-graded output. The HDR version recovers highlight and shadow detail that is permanently lost in the SDR.
-    </p>
-
-    <div class="curtain-demos">
-      <div class="curtain-card">
-        <div class="card-title">Airport &mdash; Sunrise</div>
-        <div class="curtain-wrap" data-curtain>
-          <video src="videos/vid_airport_hdr_graded.mp4" muted loop playsinline preload="metadata"></video>
-          <div class="curtain-overlay">
-            <video src="videos/vid_airport_sdr.mp4" muted loop playsinline preload="metadata"></video>
+    <div class="hero-curtains">
+      <figure class="hero-panel hero-feature" style="--ar:1.777778">
+        <figcaption>Sunset · SDR → HDR · HLG</figcaption>
+        <div class="box curtain" data-ar="1.777778" tabindex="0" role="slider"
+            aria-label="Sunset at normal exposure: drag or use arrow keys to compare" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+          <video data-src="curated/media/vid_sunset/hdr_evp0_0.mp4" muted loop playsinline preload="none"></video>
+          <div class="over"><video data-src="curated/media/vid_sunset/sdr_evp0_0.mp4" muted loop playsinline preload="none"></video></div>
+          <div class="handle" aria-hidden="true"><span></span></div>
+          <span class="tag left">SDR</span><span class="tag right">HDR</span>
+        </div>
+      </figure>
+      <div class="hero-duo">
+        <figure class="hero-panel" style="--ar:1.777778">
+          <figcaption>Astronaut · SDR → HDR · HLG</figcaption>
+          <div class="box curtain" data-ar="1.777778" tabindex="0" role="slider"
+              aria-label="Astronaut at normal exposure: drag or use arrow keys to compare" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+            <video data-src="curated/media/vid_astronaut/hdr_evp0_0.mp4" muted loop playsinline preload="none"></video>
+            <div class="over"><video data-src="curated/media/vid_astronaut/sdr_evp0_0.mp4" muted loop playsinline preload="none"></video></div>
+            <div class="handle" aria-hidden="true"><span></span></div>
+            <span class="tag left">SDR</span><span class="tag right">HDR</span>
           </div>
-          <div class="curtain-divider"></div>
-          <div class="curtain-label left-label">SDR</div>
-          <div class="curtain-label right-label">HDR - Color Graded</div>
-        </div>
-      </div>
-
-      <div class="curtain-card">
-        <div class="card-title">Sunset &mdash; Golden Hour</div>
-        <div class="curtain-wrap" data-curtain>
-          <video src="videos/vid_sunset_hdr_graded.mp4" muted loop playsinline preload="metadata"></video>
-          <div class="curtain-overlay">
-            <video src="videos/vid_sunset_sdr.mp4" muted loop playsinline preload="metadata"></video>
+        </figure>
+        <figure class="hero-panel" style="--ar:1.777778">
+          <figcaption>Woman Rooftop Sunset</figcaption>
+          <div class="box curtain" data-ar="1.777778" tabindex="0" role="slider"
+              aria-label="Woman rooftop sunset at normal exposure: drag or use arrow keys to compare" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+            <video data-src="curated/media/vid_woman_rooftop_sunset/hdr_evp0_0.mp4" muted loop playsinline preload="none"></video>
+            <div class="over"><video data-src="curated/media/vid_woman_rooftop_sunset/sdr_evp0_0.mp4" muted loop playsinline preload="none"></video></div>
+            <div class="handle" aria-hidden="true"><span></span></div>
+            <span class="tag left">SDR</span><span class="tag right">HDR</span>
           </div>
-          <div class="curtain-divider"></div>
-          <div class="curtain-label left-label">SDR</div>
-          <div class="curtain-label right-label">HDR - Color Graded</div>
-        </div>
+        </figure>
       </div>
+    </div>
+  </header>
+
+</div><!-- /wrap -->
+
+<!-- ================= VIDEO ================= -->
+<section class="block" id="video" aria-labelledby="video-title">
+  <div class="band-inner">
+    <div class="sec-head">
+      <p class="sec-kicker">Video</p>
+      <h2 class="sec-title" id="video-title">Overview video</h2>
+    </div>
+    <figure class="figure-box video-figure">
+      <video class="video-player" id="overview-video" src="assets/lumivid_acescct_r2_narrated.mp4#t=0.5" controls playsinline preload="auto"></video>
+      <script>
+        (function () {
+          var v = document.getElementById("overview-video");
+          // Frame 0 is solid white; the fade is gone by 0.5s (frame 15 at 30 fps).
+          function showContent() {
+            if (v.currentTime < 0.45) v.currentTime = 0.5;
+          }
+          v.addEventListener("loadedmetadata", showContent);
+        })();
+      </script>
+      <figcaption>Narrated overview</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= RESULTS ================= -->
+<section class="block" id="results" aria-labelledby="results-title">
+  <div class="band-inner">
+    <div class="sec-head">
+      <h2 class="sec-kicker" id="results-title">Results</h2>
+      <p class="sec-lede">SDR → HDR at normal exposure. Click a tile to expand.</p>
+    </div>
+    <div id="results-videos" class="grid-vids"></div>
+    <div class="sec-head" style="margin-top:56px">
+      <p class="sec-kicker">Stills</p>
+      <h2 class="sec-title">HDR frames</h2>
+      <p class="sec-lede">SDR → HDR on still imagery. Click a tile to expand.</p>
+    </div>
+    <div id="results-stills" class="grid-stills"></div>
+  </div>
+</section>
+
+<!-- ================= COMPARE ================= -->
+<section class="block alt" id="compare" aria-labelledby="compare-title">
+  <div class="band-inner">
+    <div class="sec-head">
+      <h2 class="sec-title" id="compare-title">Compare methods</h2>
+    </div>
+    <div class="thumbs" id="compare-chips" role="group" aria-label="Choose a clip"></div>
+    <div id="compare-player"></div>
+    <details class="pipeline-details">
+      <summary>How each method was rendered</summary>
+      <p class="pipeline-note">LumiVid: ACEScct EXR → Rec.709 × 2<sup>EV</sup> → BT.2020 HLG.
+      Tedla et al.: official 17-frame 704×1280 recipe; holds its last frame while the
+      other method continues. HDRTVNet++: frame-wise, stacked to video.
+      DiffHDR: official recipe, Rec.709-linear EXRs.
+      SDR stays Rec.709 SDR. Missing files show a red tag.</p>
+    </details>
+  </div>
+</section>
+
+<!-- ================= ABLATIONS ================= -->
+<section class="block" id="ablations" aria-labelledby="ablations-title">
+  <div class="band-inner">
+    <div class="sec-head">
+      <h2 class="sec-title" id="ablations-title">Ablations</h2>
+    </div>
+
+    <div class="sec-head follow">
+      <h3 class="sec-title sub">Camera augmentations</h3>
+      <p class="sec-lede">No augmentation, blur only, and the full model.</p>
+    </div>
+    <div class="thumbs" id="aug-chips" role="group" aria-label="Choose an augmentation clip"></div>
+    <div id="aug-player"></div>
+
+    <div class="sec-head follow">
+      <p class="sec-lede">LumiVid is the paper model. The VAE decoder never runs the video DiT: it can lift exposure, and it does not restore highlight detail or hold time. Pull to EV −3 for highlights and EV +3 for shadows.</p>
+    </div>
+    <div class="thumbs" id="ablation-chips" role="group" aria-label="Choose an ablation clip"></div>
+    <div id="ablation-player"></div>
+  </div>
+</section>
+
+<!-- ================= ABSTRACT ================= -->
+<section class="block" id="abstract" aria-labelledby="abstract-title">
+  <div class="band-inner">
+    <div class="sec-head center">
+      <p class="sec-kicker" id="abstract-title">Abstract</p>
+    </div>
+    <div class="prose">
+      <p>High dynamic range (HDR) video captures continuous scene radiance essential for professional color grading and post-production workflows, yet generative video diffusion models remain bound to 8-bit standard dynamic range (SDR) formats. Existing adaptation methods either alter the VAE latent space or rely on auxiliary inputs like luminance masks, text prompts, or external reference images. However, relying on auxiliary inputs introduces manual overhead, makes the exact prompt hard to guess, and yields less stable results that often fail to remain consistent with the original footage. We present LumiVid, a framework that generates HDR video directly from a single SDR input, without requiring masks, text prompts, or external reference images. Key to our method is mapping the HDR video into a logarithmic color space representation, aligning high-magnitude radiance with the existing latent space of a frozen video VAE without losing luminance details. Fine-tuning a dual-canvas LoRA adapter on just 300 synthetic paired clips enables data-efficient SDR-to-HDR translation while preserving temporal consistency. To prevent shortcut pixel copying during training and force the model to infer missing radiance and details from its learned priors, we introduce camera-mimicking condition degradations on the SDR reference input. Extensive evaluations show that LumiVid outperforms state-of-the-art baselines by +5.5 dB PU21-PSNR on cinema-grade ARRI footage, producing high-fidelity half-float EXR video with exceptional re-exposure latitude across extreme exposure pulls.</p>
     </div>
   </div>
 </section>
 
-<!-- ===== VIDEO SHOWCASE ===== -->
-<section>
-  <div class="container">
-    <h2>Side-by-Side Results</h2>
-    <p>
-      Full video comparisons showing SDR input alongside our HDR output, tone-mapped to reveal the extended dynamic range.
-    </p>
-
-    <div class="showcase-grid">
-      <div class="showcase-item">
-        <div class="item-info">
-          <span class="item-title">Carousel &mdash; Night Glow</span>
-          <span class="item-badge">Top: SDR &middot; Bottom: HDR</span>
-        </div>
-        <video src="videos/carousel_night_glow_sdr_vs_hdr.mp4" muted loop playsinline preload="metadata"></video>
-      </div>
-      <div class="showcase-item">
-        <div class="item-info">
-          <span class="item-title">Airport Silhouettes &mdash; Sunset</span>
-          <span class="item-badge">Top: SDR &middot; Bottom: HDR</span>
-        </div>
-        <video src="videos/airport_silhouettes_sunset.mp4" muted loop playsinline preload="metadata"></video>
-      </div>
-      <div class="showcase-item">
-        <div class="item-info">
-          <span class="item-title">Boy &mdash; Cozy Room</span>
-          <span class="item-badge">Top: SDR &middot; Bottom: HDR</span>
-        </div>
-        <video src="videos/boy_cozy_room_moody.mp4" muted loop playsinline preload="metadata"></video>
-      </div>
-      <div class="showcase-item">
-        <div class="item-info">
-          <span class="item-title">Dandelion Field &mdash; Sunset</span>
-          <span class="item-badge">Top: SDR &middot; Bottom: HDR</span>
-        </div>
-        <video src="videos/dandelion_girl_sunset_grid_hdr_vs_sdr.mp4" muted loop playsinline preload="metadata"></video>
-      </div>
+<!-- ================= METHOD ================= -->
+<section class="block alt" id="method" aria-labelledby="method-title">
+  <div class="band-inner">
+    <div class="sec-head">
+      <p class="sec-kicker">Method</p>
+      <h2 class="sec-title" id="method-title">SDR-to-HDR dual canvas LoRA</h2>
     </div>
-  </div>
-</section>
 
-<!-- ===== ABSTRACT ===== -->
-<section>
-  <div class="container">
-    <h2>Abstract</h2>
-    <p>
-      High dynamic range (HDR) imagery provides a rich representation of scene radiance, but remains challenging for diffusion models trained on bounded, perceptually compressed imagery. A natural approach is to learn a mapping from HDR data into the latent space of a pretrained diffusion model. However, this requires large HDR datasets and substantial additional training. In this work, we present a framework for SDR-to-HDR video translation and text-to-HDR video generation, leveraging the visual priors of pretrained diffusion models. We observe that applying a logarithmic encoding, commonly used in cinematic pipelines, to HDR videos produces representations that are naturally aligned with the latent space of these models. This alignment enables adapting pretrained diffusion models for HDR generation through lightweight fine-tuning, without modifying the latent space in which they operate or requiring an explicit HDR-to-latent mapping. To encourage the model to infer missing HDR content from its learned priors, we augment SDR-to-HDR training with <em>camera-mimicking degradations</em> that require recovering lost details. Using only lightweight adaptation of a pretrained video diffusion model, we demonstrate high-quality HDR video generation from both text and SDR video across diverse scenes and challenging lighting conditions. Our results show that HDR can be effectively modeled when its representation is aligned with the model's learned priors.
-    </p>
-
-    <div class="figure wide">
-      <img src="figures/hdr_training.png" alt="LumiVid training pipeline">
-      <div class="caption">
-        <strong>LumiVid Training Overview.</strong> Scene-linear HDR frames are compressed via LogC3 and encoded by the frozen VAE to produce target latents z<sub>tgt</sub>. The gray optional block is utilized only for SDR-to-HDR training, where HDR frames are tone-mapped and processed through camera-mimicking degradations to produce reference latents z<sub>ref</sub>. In the SDR-to-HDR case, these reference latents are concatenated with the noisy target latents before being fed to the Video DiT. For Text-to-HDR synthesis, there are no reference tokens to concatenate, and the DiT operates directly on noisy target latents conditioned by text prompts. Throughout both processes, the VAE remains frozen, and only the lightweight LoRA adapters are trained via flow matching loss.
+    <div class="method-cols">
+      <div class="method-card">
+        <h3>Training overview</h3>
+        <ul>
+          <li>ACEScct logarithmic encoding aligns HDR radiance with the frozen VAE input range.</li>
+          <li>Asymmetric clamp: SDR [0, 0.55] vs HDR [0, 1.0] (≈223× white)</li>
+          <li>Run the VAE encoder in the ACEScct representation to get HDR latents</li>
+          <li>Train dual canvas LoRA, VAE stays frozen</li>
+          <li>5000 steps on ~300 paired 49-frame Poly Haven orbit clips</li>
+          <li>Camera-mimicking degradations on the SDR input like contrast clipping, highlight/shadow blur, MP4 compression and joint exposure shifts, force the model to infer missing radiance</li>
+        </ul>
+      </div>
+      <div class="method-card">
+        <h3>Inference overview</h3>
+        <ul>
+          <li>Rec.709 → ACEScg → ACEScct → VAE → DiT → decode → inverse ACEScct → 16-bit half-float EXR</li>
+          <li>SDR in, scene-linear HDR out — no masks, text prompts, or external images</li>
+          <li>Outputs float16 EXR scene-linear, a gradeable, compositable plate</li>
+          <li>Re-expose in post: EV stops are rendered from the EXR, not re-generated</li>
+        </ul>
       </div>
     </div>
 
-    <div class="figure wide">
-      <img src="figures/hdr_inference.png" alt="LumiVid inference pipeline">
-      <div class="caption">
-        <strong>LumiVid Inference Overview.</strong> Our pipeline generates scene-linear HDR video from either semantic text prompts or SDR references. For SDR-to-HDR translation, an input video is processed through the gray optional path, where it is VAE-encoded to z<sub>ref</sub>, and concatenated with noise to provide spatial conditioning. In the Text-to-HDR case, this concatenation step is bypassed as there are no reference tokens; the DiT operates directly on noise and text embeddings. In both modes, the Video DiT uses trained LoRA adapters to denoise the latents, which are then VAE-decoded and decompressed via LogC3<sup>&minus;1</sup> to produce scene-linear float16 EXR files.
-      </div>
-    </div>
+    <figure class="figure-box">
+      <img src="assets/hdr_training.png" alt="LumiVid training diagram (Fig. 2): dual-canvas ACEScct-encoded SDR/HDR pairs train a rank-128 LoRA on a frozen video VAE and DiT" loading="lazy">
+      <figcaption>Fig. 2 — Training: dual-canvas ACEScct pairs, frozen VAE, LoRA only.</figcaption>
+    </figure>
+    <figure class="figure-box">
+      <img src="assets/hdr_inference.png" alt="LumiVid inference diagram (Fig. 3): SDR Rec.709 through ACEScg and ACEScct into the frozen VAE and dual-canvas DiT, decoded to half-float EXR" loading="lazy">
+      <figcaption>Fig. 3 — Inference: SDR in, scene-linear half-float EXR out.</figcaption>
+    </figure>
   </div>
 </section>
 
 <footer>
-  <p>LumiVid &mdash; Anonymous Submission</p>
+  <p><strong>LumiVid</strong></p>
+  <p>Videos: BT.2020 HLG, best on HDR display (Mac recommended)</p>
 </footer>
 
-<script>
-// =============================================
-// EV Exposure Slider Demo — pooled video approach
-// =============================================
-const EV_LEVELS = [
-  { dir: 'evm3_0', label: 'EV \u22123' },
-  { dir: 'evm1_5', label: 'EV \u22121.5' },
-  { dir: 'evp0_0', label: 'EV 0' },
-  { dir: 'evp1_5', label: 'EV +1.5' },
-  { dir: 'evp3_0', label: 'EV +3' },
-];
-const SCENES = ['dolly_orb', 'sunset_PF0045', 'window_interior', 'train_window', 'desert_tree', 'dark_forest', 'stylized-walk-sunset', 'candle-attic-night', 'cathedral-window-interior', 'welder-sparks-darkshop', 'inkwash-mountain-mist', 'fireworks-lake-finale'];
+<dialog class="modal" id="curtain-modal" aria-labelledby="modal-title">
+  <div class="modal-inner">
+    <div class="modal-bar">
+      <h3 id="modal-title"></h3>
+      <button class="modal-close" id="modal-close" type="button" aria-label="Close comparison">✕</button>
+    </div>
+    <div id="modal-content"></div>
+  </div>
+</dialog>
 
-let currentScene = 'dolly_orb';
-let currentEvIdx = 2;
-
-// Pool: videoPool[scene][type][evIdx] = <video> element
-// Lazy: scene entries are created on first activation, not up front,
-// so the page doesn't fire ~120 video requests on first paint.
-const videoPool = {};
-const sdrCol = document.getElementById('sdr-col');
-const hdrCol = document.getElementById('hdr-col');
-const evSlider = document.getElementById('ev-slider');
-const evDisplay = document.getElementById('ev-display');
-const evTicks = document.getElementById('ev-ticks');
-const sceneTabs = document.querySelectorAll('#sdr2hdr-scene-tabs .scene-tab');
-
-function getVideoPath(type, evDir, scene) {
-  return `videos/${type}/${evDir}/${scene}.mp4`;
-}
-
-function ensureScene(scene) {
-  if (videoPool[scene]) return;
-  videoPool[scene] = { sdr: [], hdr: [] };
-  EV_LEVELS.forEach((ev, idx) => {
-    ['sdr', 'hdr'].forEach(type => {
-      const v = document.createElement('video');
-      v.src = getVideoPath(type, ev.dir, scene);
-      v.muted = true;
-      v.loop = true;
-      v.playsInline = true;
-      v.preload = 'auto';
-      v.className = 'ev-hidden';
-      videoPool[scene][type][idx] = v;
-      (type === 'sdr' ? sdrCol : hdrCol).appendChild(v);
-    });
-  });
-}
-
-// Keep videos in the active scene in sync with the SDR reference's time.
-let lastRefTime = 0;
-function syncAllVideos() {
-  const ref = videoPool[currentScene]?.sdr[currentEvIdx];
-  if (!ref || ref.readyState < 2) { requestAnimationFrame(syncAllVideos); return; }
-  const t = ref.currentTime;
-  const looped = lastRefTime - t > 0.5;
-  lastRefTime = t;
-  ['sdr', 'hdr'].forEach(type => {
-    EV_LEVELS.forEach((_, idx) => {
-      const v = videoPool[currentScene][type][idx];
-      if (v !== ref) {
-        if (looped || Math.abs(v.currentTime - t) > 0.15) {
-          v.currentTime = t;
-        }
-      }
-    });
-  });
-  requestAnimationFrame(syncAllVideos);
-}
-
-function showScene(scene) {
-  ensureScene(scene);
-  // Pause every other scene's videos
-  Object.keys(videoPool).forEach(s => {
-    if (s === scene) return;
-    ['sdr', 'hdr'].forEach(type => {
-      videoPool[s][type].forEach(v => { v.className = 'ev-hidden'; v.pause(); });
-    });
-  });
-  // Play all EVs for the current scene so they stay in sync
-  ['sdr', 'hdr'].forEach(type => {
-    videoPool[scene][type].forEach(v => { v.play().catch(() => {}); });
-  });
-}
-
-function updateEV(idx) {
-  const prevSdr = videoPool[currentScene]?.sdr[currentEvIdx];
-  currentEvIdx = idx;
-  ensureScene(currentScene);
-
-  // Swap visibility
-  ['sdr', 'hdr'].forEach(type => {
-    EV_LEVELS.forEach((_, i) => {
-      const v = videoPool[currentScene][type][i];
-      v.className = (i === idx) ? 'ev-active' : 'ev-hidden';
-    });
-  });
-
-  // Sync new active to previous time
-  if (prevSdr && prevSdr.readyState >= 2) {
-    const t = prevSdr.currentTime;
-    videoPool[currentScene].sdr[idx].currentTime = t;
-    videoPool[currentScene].hdr[idx].currentTime = t;
-  }
-
-  evDisplay.textContent = EV_LEVELS[idx].label;
-  evSlider.value = idx;
-  evTicks.querySelectorAll('span').forEach(t => {
-    t.classList.toggle('active-tick', parseInt(t.dataset.idx) === idx);
-  });
-}
-
-function setScene(scene) {
-  currentScene = scene;
-  sceneTabs.forEach(t => t.classList.toggle('active', t.dataset.scene === scene));
-  showScene(scene);
-  updateEV(currentEvIdx);
-}
-
-evSlider.addEventListener('input', () => updateEV(parseInt(evSlider.value)));
-evTicks.querySelectorAll('span').forEach(t => {
-  t.addEventListener('click', () => updateEV(parseInt(t.dataset.idx)));
-});
-sceneTabs.forEach(t => {
-  t.addEventListener('click', () => setScene(t.dataset.scene));
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowLeft' && currentEvIdx > 0) updateEV(currentEvIdx - 1);
-  if (e.key === 'ArrowRight' && currentEvIdx < 4) updateEV(currentEvIdx + 1);
-});
-
-showScene('dolly_orb');
-updateEV(2);
-syncAllVideos();
-
-// =============================================
-// Text-to-HDR EV Demo
-// =============================================
-const T2HDR_SCENES = ['neon_noir', 'scifi_bridge', 'savanna_sunset', 'horror_basement', 'war_trench', 'period_drama', 'dramatic_interior', 'aerial_drone', 'underwater'];
-const T2HDR_PROMPTS = {
-  neon_noir: "Cinematic neo-noir thriller scene on a rain-drenched Hong Kong side street at 2 AM. A tall woman in her thirties with cropped black hair, a red vinyl trench coat dripping water, and a cigarette burning between two gloved fingers stands beneath a buzzing magenta noodle-shop sign. Reflections of cyan and pink neon pool on the wet asphalt beneath her boots.",
-  scifi_bridge: "Cinematic sci-fi movie scene on the bridge of a massive starship. A wide curved viewscreen dominates the front wall, showing a field of swirling plasma streaming past at faster-than-light. The captain \u2014 a tall Nigerian woman in her early fifties, gold-trimmed navy uniform \u2014 stares forward, unblinking. She says, quiet and level, \u201Ctake us in.\u201D",
-  savanna_sunset: "Cinematic nature documentary scene over a Kenyan savanna at sunrise. The sun is a huge orange disc half above the horizon, silhouetting acacia trees against a magenta-to-cobalt sky. A lone herd of elephants walks in single file across the foreground, dust rising in soft golden clouds around their feet.",
-  horror_basement: "Cinematic horror scene inside a single-bulb basement at night. A bare incandescent bulb on a chain swings slowly in the center of a concrete basement, its circle of warm yellow light sliding back and forth across stacked cardboard boxes. The corners of the room are pitch black. A young woman stands at the base of the wooden stairs holding her phone as a flashlight.",
-  war_trench: "Cinematic war drama scene at a muddy Eastern Front trench at dawn in 1915. Freezing fog hangs over a churned no-man\u2019s-land. Soldiers in wet wool greatcoats crowd along a trench wall, bayonets fixed. The low sun struggles through the mist as a pale orange disc. A whistle blows. The sergeant roars, \u201COVER THE TOP \u2014 MOVE!\u201D",
-  period_drama: "Cinematic period drama scene in a 17th-century Dutch study at night. A single tallow candle burns on a heavy oak writing desk, its flame tall and bending slightly, throwing a trembling warm yellow light on parchment, a brass inkwell, and the lined face of an elderly scholar. He pauses, closes his eyes, and whispers, \u201CHeaven forgive me \u2014 I have seen too much.\u201D",
-  dramatic_interior: "Cinematic drama movie scene. Tight close-up on a woman in her mid-fifties, Southeast Asian, shoulder-length hair streaked with grey, wearing a cream blouse and a navy cardigan. She sits behind a desk in a small home office lit by a single green banker\u2019s lamp and the blue wash of a laptop screen on her face. Behind her, a window shows the deep indigo of a rainy evening.",
-
-  aerial_drone: "Cinematic aerial scene over Manhattan at sunrise. The drone flies slowly between skyscraper canyons as the first light of day hits the east-facing glass facades, turning them into walls of molten gold. Cool blue shadow still fills the streets below. The East River glitters orange-pink beyond.",
-  underwater: "Cinematic underwater scene of a sunken WWII battleship wreck at noon. The camera glides through gaping holes in the rusted hull. Shafts of bright white sunlight pierce from above, hitting the dust-like silt in sharp god-rays and illuminating the skeletal remains of a gun turret. Small silver fish scatter through the beams.",
-};
-let t2hdrScene = 'neon_noir';
-let t2hdrEvIdx = 2;
-const t2hdrPool = {};
-const t2hdrCol = document.getElementById('t2hdr-col');
-const t2hdrSlider = document.getElementById('t2hdr-ev-slider');
-const t2hdrDisplay = document.getElementById('t2hdr-ev-display');
-const t2hdrTicks = document.getElementById('t2hdr-ev-ticks');
-const t2hdrTabs = document.querySelectorAll('#t2hdr-scene-tabs .scene-tab');
-
-function ensureT2hdrScene(scene) {
-  if (t2hdrPool[scene]) return;
-  t2hdrPool[scene] = [];
-  EV_LEVELS.forEach((ev, idx) => {
-    const v = document.createElement('video');
-    v.src = `videos/t2hdr/${ev.dir}/${scene}.mp4`;
-    v.muted = true;
-    v.loop = true;
-    v.playsInline = true;
-    v.preload = 'auto';
-    v.className = 'ev-hidden';
-    t2hdrPool[scene][idx] = v;
-    t2hdrCol.appendChild(v);
-  });
-}
-
-let t2hdrLastRefTime = 0;
-function syncT2hdrVideos() {
-  const ref = t2hdrPool[t2hdrScene]?.[t2hdrEvIdx];
-  if (!ref || ref.readyState < 2) { requestAnimationFrame(syncT2hdrVideos); return; }
-  const t = ref.currentTime;
-  const looped = t2hdrLastRefTime - t > 0.5;
-  t2hdrLastRefTime = t;
-  EV_LEVELS.forEach((_, idx) => {
-    const v = t2hdrPool[t2hdrScene][idx];
-    if (v !== ref && (looped || Math.abs(v.currentTime - t) > 0.15)) {
-      v.currentTime = t;
-    }
-  });
-  requestAnimationFrame(syncT2hdrVideos);
-}
-
-function showT2hdrScene(scene) {
-  ensureT2hdrScene(scene);
-  Object.keys(t2hdrPool).forEach(s => {
-    if (s === scene) return;
-    t2hdrPool[s].forEach(v => { v.className = 'ev-hidden'; v.pause(); });
-  });
-  t2hdrPool[scene].forEach((v, idx) => {
-    v.play().catch(() => {});
-    v.className = (idx === t2hdrEvIdx) ? 'ev-active' : 'ev-hidden';
-  });
-}
-
-function updateT2hdrEV(idx) {
-  const prev = t2hdrPool[t2hdrScene]?.[t2hdrEvIdx];
-  t2hdrEvIdx = idx;
-  ensureT2hdrScene(t2hdrScene);
-  EV_LEVELS.forEach((_, i) => {
-    const v = t2hdrPool[t2hdrScene][i];
-    v.className = (i === idx) ? 'ev-active' : 'ev-hidden';
-  });
-  if (prev && prev.readyState >= 2) {
-    t2hdrPool[t2hdrScene][idx].currentTime = prev.currentTime;
-  }
-  t2hdrDisplay.textContent = EV_LEVELS[idx].label;
-  t2hdrSlider.value = idx;
-  t2hdrTicks.querySelectorAll('span').forEach(t => {
-    t.classList.toggle('active-tick', parseInt(t.dataset.idx) === idx);
-  });
-}
-
-const t2hdrPromptEl = document.getElementById('t2hdr-prompt');
-function updateT2hdrPrompt(scene) {
-  t2hdrPromptEl.innerHTML = '<span class="prompt-label">Prompt:</span>' + T2HDR_PROMPTS[scene];
-}
-
-function setT2hdrScene(scene) {
-  t2hdrScene = scene;
-  t2hdrTabs.forEach(t => t.classList.toggle('active', t.dataset.scene === scene));
-  updateT2hdrPrompt(scene);
-  showT2hdrScene(scene);
-  updateT2hdrEV(t2hdrEvIdx);
-}
-
-t2hdrSlider.addEventListener('input', () => updateT2hdrEV(parseInt(t2hdrSlider.value)));
-t2hdrTicks.querySelectorAll('span').forEach(t => {
-  t.addEventListener('click', () => updateT2hdrEV(parseInt(t.dataset.idx)));
-});
-t2hdrTabs.forEach(t => {
-  t.addEventListener('click', () => setT2hdrScene(t.dataset.scene));
-});
-
-showT2hdrScene('neon_noir');
-updateT2hdrPrompt('neon_noir');
-updateT2hdrEV(2);
-syncT2hdrVideos();
-
-// =============================================
-// Before/After Curtain
-// =============================================
-document.querySelectorAll('[data-curtain]').forEach(wrap => {
-  const overlay = wrap.querySelector('.curtain-overlay');
-  const divider = wrap.querySelector('.curtain-divider');
-  const bgVideo = wrap.querySelector(':scope > video');
-  const fgVideo = overlay.querySelector('video');
-  let isDragging = false;
-
-  function setCurtain(x) {
-    const rect = wrap.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
-    overlay.style.width = pct * 100 + '%';
-    fgVideo.style.width = rect.width + 'px';
-    divider.style.left = pct * 100 + '%';
-  }
-
-  requestAnimationFrame(() => {
-    setCurtain(wrap.getBoundingClientRect().left + wrap.getBoundingClientRect().width * 0.5);
-  });
-
-  // Sync: only correct large drift to avoid freezing playback
-  let lastT = 0;
-  function syncCurtainVideos() {
-    if (bgVideo.readyState >= 2 && fgVideo.readyState >= 2) {
-      const t = bgVideo.currentTime;
-      const looped = lastT - t > 0.5;
-      lastT = t;
-      if (looped) {
-        fgVideo.currentTime = t;
-        fgVideo.play().catch(() => {});
-      } else if (Math.abs(t - fgVideo.currentTime) > 0.3) {
-        fgVideo.currentTime = t;
-      }
-    }
-    requestAnimationFrame(syncCurtainVideos);
-  }
-  requestAnimationFrame(syncCurtainVideos);
-
-  // Instant sync on loop restart
-  bgVideo.addEventListener('seeking', () => {
-    if (bgVideo.currentTime < 0.1) {
-      fgVideo.currentTime = 0;
-      fgVideo.play().catch(() => {});
-    }
-  });
-
-  // Keep overlay video width correct on resize
-  window.addEventListener('resize', () => {
-    fgVideo.style.width = wrap.getBoundingClientRect().width + 'px';
-  });
-
-  wrap.addEventListener('mousedown', (e) => { isDragging = true; setCurtain(e.clientX); });
-  wrap.addEventListener('touchstart', (e) => { isDragging = true; setCurtain(e.touches[0].clientX); }, { passive: true });
-  document.addEventListener('mousemove', (e) => { if (isDragging) setCurtain(e.clientX); });
-  document.addEventListener('touchmove', (e) => { if (isDragging) setCurtain(e.touches[0].clientX); }, { passive: true });
-  document.addEventListener('mouseup', () => isDragging = false);
-  document.addEventListener('touchend', () => isDragging = false);
-});
-
-// Auto-play videos on intersection
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    const videos = entry.target.querySelectorAll('video');
-    videos.forEach(v => {
-      if (entry.isIntersecting) {
-        v.play().catch(() => {});
-      } else {
-        v.pause();
-      }
-    });
-  });
-}, { threshold: 0.3 });
-
-document.querySelectorAll('.curtain-card, .showcase-item').forEach(el => observer.observe(el));
-
-</script>
-
+<script src="app.v4.js"></script>
 </body>
 </html>
